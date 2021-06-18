@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/chuwt/fasthttp-client"
-	"math/big"
 )
 
 type ChiaClient struct {
@@ -65,48 +64,21 @@ func (c *ChiaClient) GetCoins(req GetCoinsReq) (*GetCoinsRes, error) {
 	return resp, nil
 }
 
-type NewSignedTxReq struct {
-	Coins      []*CoinRecord
-	SendToList []*SendTo // you can send to multi address
-	Fee        *big.Int
-}
-
-type SendTo struct {
-	To     Address
-	Amount *big.Int
-}
-
-// NewSignedTx generate a new signed tx
-func (c *ChiaClient) NewSignedTx(req NewSignedTxReq) error {
-	var maxSend, totalSend = big.NewInt(0), big.NewInt(0)
-	// calculate max amount that address can send to
-	for _, coin := range req.Coins {
-		if !coin.Coin.Spent {
-			maxSend = new(big.Int).Add(maxSend, coin.Coin.Amount)
-		}
-	}
-
-	for _, send := range req.SendToList {
-		totalSend = new(big.Int).Add(totalSend, send.Amount)
-	}
-
-	if maxSend.Cmp(totalSend) < 0 {
-		return errors.New("insufficient balance")
-	}
-
-	// select coins from req.Coins that can spent for total send
-	// sort first
-	return nil
-
-}
-
-func (c *ChiaClient) newUnsignedTx() {
-
-}
-
 // SendTx send a tx to full_node by requesting /push_tx
-func (c *ChiaClient) SendTx() {
-
+func (c *ChiaClient) PushTx(req SpendBundleReq) ([]byte, error) {
+	data, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	res, err := fasthttp.NewClient().
+		SetCrt(c.certPath, c.keyPath).
+		AddBodyByte(data).
+		AddHeader("content-type", "application/json").
+		Post(c.url + "/push_tx")
+	if err != nil {
+		return nil, err
+	}
+	return res.Body, nil
 }
 
 type Opt func(*ChiaClient)

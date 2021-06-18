@@ -1,0 +1,5 @@
+# rename file with app.yaml in this folder
+url: "https://192.168.1.58:8555"
+ssl:
+  cert_path: "/Volumes/hdd1000gb/workspace/src/chia-client/ssl/full_node/private_full_node.crt"
+  key_path: "/Volumes/hdd1000gb/workspace/src/chia-client/ssl/full_node/private_full_node.key"
