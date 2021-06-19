@@ -5,6 +5,7 @@ import (
 	"math/big"
 )
 
+// GetCoinsReq
 type GetCoinsReq struct {
 	Address Address
 	Start   int64
@@ -40,18 +41,8 @@ func (c *Coin) ToJson() string {
 	return string(jsonBytes)
 }
 
-type NewSignedTxReq struct {
-	Coins      []*CoinRecord
-	SendToList []*SendTo // you can send to multi addresses
-	Fee        *big.Int
-}
-
-type SendTo struct {
-	To     Address
-	Amount *big.Int
-}
-
-type SpendBundleReq struct {
+// PushTxReq
+type PushTxReq struct {
 	SpendBundle SpendBundle `json:"spend_bundle"`
 }
 
@@ -64,4 +55,12 @@ type CoinSolution struct {
 	Coin         SmallCoin `json:"coin"`
 	PuzzleReveal string    `json:"puzzle_reveal"`
 	Solution     string    `json:"solution"`
+}
+
+// SignTxReq
+type SignTxReq struct {
+	Sk         string      `json:"sk"`
+	UnsignedTx SpendBundle `json:"spend_bundle"`
+	MsgList    [][]byte    `json:"msg_list"`
+	PkList     [][]byte    `json:"pk_list"`
 }

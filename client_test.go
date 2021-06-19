@@ -1,7 +1,9 @@
 package chia_client
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	bls "github.com/chuwt/chia-bls-go"
 	"testing"
 )
 
@@ -40,7 +42,7 @@ func TestSendTx(t *testing.T) {
 	if err := json.Unmarshal(reqBytes, bundle); err != nil {
 		t.Fatal(err)
 	}
-	req := SpendBundleReq{
+	req := PushTxReq{
 		SpendBundle: *bundle,
 	}
 	body, err := testClient.PushTx(req)
@@ -48,4 +50,34 @@ func TestSendTx(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(body))
+}
+
+func TestSignTx(t *testing.T) {
+
+}
+
+func TestSignTxFunc(t *testing.T) {
+	var (
+		// 签名的walletSk
+		skHexString = "58a8b3237c9981ff476a897fc0d6b377bd5b2e57cbfcdf664c76963a52041012"
+		// 待签名的msg
+		msgHex = "10f4962dfabb2e21217ae886084a10a8626e873d692c353b9004331d0e9966e33445218ca583311ea1490b1a8cdf2af8ad84d583adb31c2cfa141bace8cc9fc3ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"
+		// 签名的alletSk对应的pk
+		pkHex = "a9cc8198f9453fa1945c74a45a32037aa42b406896d966118cab49786938d7082bd13a61d36fc24208f9fc491baffd01"
+	)
+
+	sk, _ := bls.KeyFromHexString(skHexString)
+
+	msgBytes, _ := hex.DecodeString(msgHex)
+	msgList := [][]byte{msgBytes}
+
+	pkBytes, _ := hex.DecodeString(pkHex)
+	pkList := [][]byte{pkBytes}
+
+	signBytes, err := testClient.signTx(sk, msgList, pkList)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// should be 0xb166d38fa4b84eccd3da941264c8b3c6decd97f3ad020bc48b8e51d2013a7e200f3ac54c676e9eb6786a6cc29c3bcc070040c5c5fd608295461e9c918959b608e1a9b9a0911aac425d22d8068fbd538e5468692eccfbaaf36a5f9267d3170c22
+	t.Log(hex.EncodeToString(signBytes))
 }

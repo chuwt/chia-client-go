@@ -1,8 +1,12 @@
 package chia_client
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	bls "github.com/chuwt/chia-bls-go"
 	"github.com/chuwt/fasthttp-client"
 )
 
@@ -64,8 +68,53 @@ func (c *ChiaClient) GetCoins(req GetCoinsReq) (*GetCoinsRes, error) {
 	return resp, nil
 }
 
+// SignTx sign a unsigned tx from chia-tx. see github.com/chuwt/chia-tx
+func (c *ChiaClient) SignTx(req SignTxReq) (PushTxReq, error) {
+	sk, err := bls.KeyFromHexString(req.Sk)
+	if err != nil {
+		return PushTxReq{}, err
+	}
+	signature, err := c.signTx(sk, req.MsgList, req.PkList)
+	if err != nil {
+		return PushTxReq{}, err
+	}
+	req.UnsignedTx.AggregatedSignature = "0x" + hex.EncodeToString(signature)
+	return PushTxReq{
+		SpendBundle: req.UnsignedTx,
+	}, nil
+}
+
+func (c *ChiaClient) signTx(sk bls.PrivateKey, msgList, pkList [][]byte) ([]byte, error) {
+	syntheticSk := sk.SyntheticSk(bls.Hidden)
+	sigList := make([][]byte, 0)
+	for index, msg := range msgList {
+		if bytes.Compare(pkList[index], syntheticSk.GetPublicKey().Bytes()) != 0 {
+			return nil, fmt.Errorf("pk in the index %d is not equal with sk's public key", index)
+		}
+		sig := new(bls.AugSchemeMPL).Sign(syntheticSk, msg)
+
+		pk, err := bls.NewPublicKey(pkList[index])
+		if err != nil {
+			return nil, fmt.Errorf("load public key from pk in the index %d error: %s", index, err.Error())
+		}
+		if !new(bls.AugSchemeMPL).Verify(pk, msg, sig) {
+			return nil, fmt.Errorf("verify pk signature error at the index %d", index)
+		}
+
+		sigList = append(sigList, sig)
+	}
+	aggSig, err := new(bls.AugSchemeMPL).Aggregate(sigList...)
+	if err != nil {
+		return nil, err
+	}
+	if !new(bls.AugSchemeMPL).AggregateVerify(pkList, msgList, aggSig) {
+		return nil, errors.New("aggregate sign error")
+	}
+	return aggSig, nil
+}
+
 // SendTx send a tx to full_node by requesting /push_tx
-func (c *ChiaClient) PushTx(req SpendBundleReq) ([]byte, error) {
+func (c *ChiaClient) PushTx(req PushTxReq) ([]byte, error) {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
