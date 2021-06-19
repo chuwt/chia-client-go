@@ -1,7 +1,6 @@
 package chia_client
 
 import (
-	"chia-client/config"
 	"encoding/json"
 	"testing"
 )
@@ -9,12 +8,11 @@ import (
 var testClient *ChiaClient
 
 func init() {
-	config.InitConfig("./conf/app.yaml")
 	testClient = NewChiaClient(
-		config.Config.Url,
+		"https://192.168.1.58:8555",
 		TlsCertOpt(
-			config.Config.SSL.CertPath,
-			config.Config.SSL.KeyPath,
+			"./ssl/full_node/private_full_node.crt",
+			"./ssl/full_node/private_full_node.key",
 		),
 	)
 }
