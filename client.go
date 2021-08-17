@@ -115,10 +115,13 @@ func (c *ChiaClient) signTx(sk bls.PrivateKey, msgList, pkList [][]byte) ([]byte
 
 // SendTx send a tx to full_node by requesting /push_tx
 func (c *ChiaClient) PushTx(req PushTxReq) ([]byte, error) {
+	// gen tx_hash from request
+
 	data, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+
 	res, err := fasthttp.NewClient().
 		SetCrt(c.certPath, c.keyPath).
 		AddBodyByte(data).

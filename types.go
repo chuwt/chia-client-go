@@ -1,8 +1,11 @@
 package chia_client
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"math/big"
+	"strings"
 )
 
 // GetCoinsReq
@@ -22,9 +25,9 @@ type CoinRecord struct {
 }
 
 type SmallCoin struct {
-	Amount         *big.Int `json:"amount"`
 	ParentCoinInfo string   `json:"parent_coin_info"`
 	PuzzleHash     string   `json:"puzzle_hash"`
+	Amount         *big.Int `json:"amount"`
 }
 
 type Coin struct {
@@ -49,6 +52,27 @@ type PushTxReq struct {
 type SpendBundle struct {
 	CoinSolutions       []CoinSolution `json:"coin_solutions"`
 	AggregatedSignature string         `json:"aggregated_signature"`
+}
+
+func (sb *SpendBundle) TxHash() (string, error) {
+	tmpBytes := make([]byte, 4)
+	amountBytes := make([]byte, 8)
+	txHashList := make([]string, 0)
+	txHashList = append(txHashList, hex.EncodeToString(big.NewInt(int64(len(sb.CoinSolutions))).FillBytes(tmpBytes)))
+	for _, cs := range sb.CoinSolutions {
+		txHashList = append(txHashList, strings.TrimPrefix(cs.Coin.ParentCoinInfo, "0x"))
+		txHashList = append(txHashList, strings.TrimPrefix(cs.Coin.PuzzleHash, "0x"))
+		txHashList = append(txHashList, hex.EncodeToString(cs.Coin.Amount.FillBytes(amountBytes)))
+		txHashList = append(txHashList, strings.TrimPrefix(cs.PuzzleReveal, "0x"))
+		txHashList = append(txHashList, strings.TrimPrefix(cs.Solution, "0x"))
+	}
+	txHashList = append(txHashList, strings.TrimPrefix(sb.AggregatedSignature, "0x"))
+	m, err := hex.DecodeString(strings.Join(txHashList, ""))
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.Sum256(m)
+	return hex.EncodeToString(hash[:]), nil
 }
 
 type CoinSolution struct {
